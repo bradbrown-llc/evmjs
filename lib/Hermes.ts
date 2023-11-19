@@ -10,10 +10,11 @@ export default class Hermes {
         params = []
         const body = JSON.stringify(Object.assign(request, { method, params }))
         const response = await fetch(rpc, { method: 'POST', body })
-        const json = await response.json() as unknown
+        let json; const text = await response.text()
+        try { json = JSON.parse(text) } catch (_) { throw `not valid JSON: ${text}` }
         if (isEJRARes(json)) return json.result
         if (isEJRAErr(json)) throw json.error
-        throw 'response not valid'
+        throw `response not valid: ${JSON.stringify(json)}`
     }
 
 }
