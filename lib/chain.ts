@@ -54,8 +54,8 @@ function isChainsets(x: unknown): x is Chain[][] { return !whyNotChainsets(x) }
 
 // extract Chains, telling us what's missing or invalid
 const chains: Chain[] = []
-for await (const dirEntry of await Deno.readDir('./chains/_data/chains')) {
-    const uint8Array = await Deno.readFile(`./chains/_data/chains/${dirEntry.name}`)
+for await (const dirEntry of await Deno.readDir(`${new URL(import.meta.url).pathname.replace(/[^\/]*$/, 'chains')}/_data/chains`)) {
+    const uint8Array = await Deno.readFile(`${new URL(import.meta.url).pathname.replace(/[^\/]*$/, 'chains')}/_data/chains/${dirEntry.name}`)
     const text = new TextDecoder().decode(uint8Array)
     const chain = JSON.parse(text)
     if (!isChain(chain)) throw new Error(`Invalid Chain`, { cause: `${dirEntry.name} - ${whyNotChain(chain)}: ${JSON.stringify(chain)}` })
