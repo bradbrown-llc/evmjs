@@ -1,21 +1,16 @@
 // see whyNotX and isX pattern from lib/chain.ts
 
-function whyNotEJRARes(x:unknown) {
-    if (!(typeof x == 'object') || x === null) return 'not real object'
-    if (!('jsonrpc' in x && x.jsonrpc == '2.0')) return 'jsonrpc missing or invalid'
-    if (!('result' in x)) return 'result missing'
-    if (!('id' in x && typeof x.id == 'number')) return 'id missing or invalid'
-}
+function isEjraRes(x:unknown): x is EjraRes {
+    return typeof x === 'object' && x !== null
+        && 'jsonrpc' in x && x.jsonrpc === '2.0'
+        && 'id' in x
+            && (typeof x.id == 'string'
+                || typeof x.id == 'number'
+                || x.id === null)
+        && (('result' in x && !('error' in x))
+            || ('error' in x && !('result' in x)
+                && typeof x.error == 'object' && x.error !== null
+                && 'code' in x.error && typeof x.error.code == 'number'
+                && 'message' in x.error && typeof x.error.message == 'string'))}
 
-function whyNotEJRAErr(x:unknown) {
-    if (!(typeof x == 'object') || x === null) return 'not real object'
-    if (!('jsonrpc' in x && x.jsonrpc == '2.0')) return 'jsonrpc missing or invalid'
-    if (!('error' in x && typeof x.error == 'object' && x.error !== null)) return 'error missing'
-    if (!('id' in x && typeof x.id == 'number')) return 'id missing or invalid'
-}
-
-function isEJRARes(x:unknown): x is EJRARes { return !whyNotEJRARes(x) }
-
-function isEJRAErr(x:unknown): x is EJRAErr { return !whyNotEJRAErr(x) }
-
-export { isEJRARes, isEJRAErr }
+export { isEjraRes }
