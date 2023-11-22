@@ -1,27 +1,52 @@
 import rethrow from './rethrow.ts'
 import Hermes from './HermesRpc.ts' 
-import { isEjraRes } from './EJRA.ts'
 
-type EshOpts = { dry?:boolean }
+type EjraRpc = Ejra
 
-type EjraRpc2 = {
-    [P in keyof EjraRpc]: (...p: Parameters<EjraRpc[P]>) =>
-        Promise<Awaited<ReturnType<EjraRpc[P]>>|EjraReq>
-}
+export default class EshRpc implements Pick<EjraRpc, 'clientVersion'|'sha3'> {
 
-export default class EshRpc implements Pick<EjraRpc2, 'clientVersion'> {
-
-    rpc: string
+    rpc:string
+    batching:boolean
+    reqs:Array<JsonRpcReq>
+    id:number
     
-    constructor(rpc:string) { this.rpc = rpc }
+    constructor(rpc:string) { this.rpc = rpc; this.batching = false; this.reqs = []; this.id = 0 }
+    batch() { this.batching = true; return this }
+    request(opts:{ dry:true }):{ url:string, reqs:Array<JsonRpcReq> }
+    request(opts?:{ dry?:false }):Promise<unknown>
+    request(opts?:{ dry?:boolean }) {
+        this.batching = false
+        this.id = 0
+        if (opts?.dry) return { url: this.rpc, reqs: this.reqs }
+        return Hermes.request(this.rpc, this.reqs)
+    }
     
-    async clientVersion(opts?:EshOpts) {
-        const response = await Hermes.call(this.rpc, { method: 'web3_clientVersion', ...opts}).catch(rethrow)
-        if (opts?.dry === true) return response as EjraReq
-        if (!isEjraRes(response)) throw new Error('response shape not EjraRes')
-        if (response.error) throw new Error('response error')
-        if (typeof response.result != 'string') throw new Error('invalid result')
-        return response.result
+    clientVersion():typeof this
+    clientVersion(opts:{ dry:true }):{ url:string, req:JsonRpcReq }
+    clientVersion(opts?:{ dry?:false }):Promise<string>
+    clientVersion(opts?:{ dry?:boolean }) {
+        const method = 'web3_clientVersion'
+        const req:JsonRpcReq = { jsonrpc:'2.0', method, params: [], id: this.id }
+        if (this.batching) { this.reqs.push(req); this.id++; return this }
+        else if (opts?.dry) return { url: this.rpc, req }
+        else return Hermes.request(this.rpc, req).then(result => {
+            if (typeof result != 'string') throw new Error('invalid result')
+            return result
+        }).catch(rethrow)
+    }
+    
+    sha3(data:string):typeof this
+    sha3(data:string, opts:{ dry:true }):{ url:string, req:JsonRpcReq }
+    sha3(data:string, opts?:{ dry?:false }):Promise<string>
+    sha3(data:string, opts?:{ dry?:boolean }) {
+        const method = 'web3_sha3'
+        const req:JsonRpcReq = { jsonrpc:'2.0', method, params: [data], id: this.id }
+        if (this.batching) { this.reqs.push(req); this.id++; return this }
+        else if (opts?.dry) return { url: this.rpc, req }
+        else return Hermes.request(this.rpc, req).then(result => {
+            if (typeof result != 'string') throw new Error('invalid result')
+            return result
+        }).catch(rethrow)
     }
     
 }
