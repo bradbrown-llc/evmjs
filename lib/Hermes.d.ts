@@ -1,5 +1,5 @@
-type HermesOpts = {
-    id?:number
+type HermesReq = {
+    id?:number|null
     method:string
     params?:EjraParams
     dry?:boolean
