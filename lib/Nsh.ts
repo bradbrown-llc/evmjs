@@ -1,4 +1,4 @@
-import { isString, isArray, isJsonRpcRes } from './guards.ts'
+import { isString, isArray, isJsonRpcRes, isBigIntable } from './guards.ts'
 
 class Nsh {
     url:string
@@ -109,7 +109,8 @@ class Nsh {
     }
     clientVersion() { return this.pushIx('web3_clientVersion', isString) }
     sha3(data:string) { return this.pushIx('web3_sha3', isString, [data]) }
-    blockNumber() { return this.pushIx('eth_blockNumber', isString) }
+    blockNumber() { return this.pushIx('eth_blockNumber', isBigIntable) }
+    getLogs(filter:Filter) { return this.pushIx('eth_getLogs', isArray, [filter]) }
 }
 
 export default Nsh
