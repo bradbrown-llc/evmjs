@@ -1,28 +1,40 @@
+// Asynchronous Iterable Queue
+// anything with a reference to it can push() items into the queue
+// (probably only one thing should) read items from the queue like
+// for await (const item of queue) { console.log(item) }
+// queue reading runs until the AIQ's terminator symbol is pushed into the queue like
+// see bottom for minimal usage example
 export default class AIQ<T> implements AsyncIterator<T>{
 
-    promise!: Promise<unknown>
     push!: (x: T|symbol) => void
-    queue: Array<T|symbol>
     terminator: symbol
+    #promise!: Promise<unknown>
+    #queue: Array<T|symbol>
 
     constructor() {
         this.#resetPromise()
-        this.queue = []
+        this.#queue = []
         this.terminator = Symbol()
     }
     
     async next():Promise<IteratorResult<T>> {
-        if (!this.queue.length) { await this.promise; this.#resetPromise() }
-        const value = this.queue.shift() as T|symbol
-        if (typeof value == 'symbol') {
-            if (value === this.terminator) return { done: true, value: null }
-            else throw 'invalid terminator symbol'
-        }
-        return { value }
+        if (!this.#queue.length) { await this.#promise; this.#resetPromise() }
+        const value = this.#queue.shift() as T|symbol
+        if (typeof value == 'symbol') return { done: true, value: null }
+        else return { value }
     }
     
     [Symbol.asyncIterator]() { return this }
     
-    #resetPromise() { this.promise = new Promise(r => this.push = (x: T|symbol) => { this.queue.push(x); r(null) }) }
+    #resetPromise() { this.#promise = new Promise(r => this.push = (x: T|symbol) => { this.#queue.push(x); r(null) }) }
     
 }
+
+// import AIQ from './lib/AIQ.ts'
+// const aiq:AIQ<number> = new AIQ()
+// ;(async () => { for await (const item of aiq) console.log(item) })()
+// for (let i = 0; i < 10; i++) {
+//     await new Promise(r => setTimeout(r, Math.random() * 2500))
+//     if (i == 7) aiq.push(aiq.terminator)
+//     aiq.push(Math.random())
+// }
