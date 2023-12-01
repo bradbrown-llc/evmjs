@@ -1,40 +1,40 @@
-import { isString, isArray, isJsonRpcRes, isBigIntable } from './guards.ts'
+import { isString, isArray, isJsonRpcRes, isBigIntable, isObject } from './guards.ts'
 
 class Nsh {
     url:string
     bx:boolean // batching mode
     ixs:Ixs
-    fetches:Array<Promise<this>>
+    fetches:Promise<this>[]
     constructor(url:string, o?:{ bx?:true }) {
         this.url = url
         this.bx = o?.bx ?? false
         this.ixs = []
         this.fetches = []
     }
-    get results() {
-        // return a promise that waits for the last fetch to finish
-        // then gather the latests results
-        const ixs = this.ixs.filter(({ sent }) => sent).toReversed()
-        if (!ixs.length) return []
-        return new Promise(resolve => {
-            this.fetches[0].finally(() => {
-                const r = [ixs[0]]
-                for (const ix of ixs.slice(1)) {
-                    if (ix.req.id >= (r[0] as Ix).req.id) break
-                    r.unshift(ix)
-                }
-                resolve(r.map(i => i.res ||  i.err))
-            })
-        })
-    }
-    pushIx(method:string, guard:Guard, params?:Array<unknown>) {
+    // get results() {
+    //     // return a promise that waits for the last fetch to finish
+    //     // then gather the latests results
+    //     const ixs = this.ixs.filter(({ sent }) => sent).toReversed()
+    //     if (!ixs.length) return []
+    //     return new Promise(resolve => {
+    //         this.fetches[0].finally(() => {
+    //             const r = [ixs[0]]
+    //             for (const ix of ixs.slice(1)) {
+    //                 if (ix.req.id >= (r[0] as Ix).req.id) break
+    //                 r.unshift(ix)
+    //             }
+    //             resolve(r.map(i => i.res ||  i.err))
+    //         })
+    //     })
+    // }
+    #unshiftIx(method:string, guard:Guard, params?:unknown[]) {
         if (!this.bx) for (const ix of this.ixs) if (!ix.sent) ix.pickled = true
         params = params ?? []
         const jsonrpc = '2.0' as const
         const id = this.ixs.filter(({ sent, pickled }) => !sent && !pickled).length
         const req = { jsonrpc, method, params, id }
         const ix = { req, guard }
-        this.ixs.push(ix)
+        this.ixs.unshift(ix)
         return this
     }
     setBx(flag:boolean) {
@@ -42,7 +42,7 @@ class Nsh {
         this.bx = flag
         return this
     }
-    send() {
+    send(o?:{ signal?:AbortSignal }) {
         // # build up what we need to send and how to handle response
         const replacer =  (_:string, v:unknown) =>
             typeof v == 'bigint'
@@ -57,7 +57,7 @@ class Nsh {
         const body = JSON.stringify(reqs, replacer)
         const headers = { 'Content-Type': 'application/json' }
         const method = 'POST'
-        const signal = AbortSignal.timeout(5000)
+        const signal = o?.signal ?? AbortSignal.timeout(5000)
         const init = { body, headers, method, signal }
         const handleRes = (res:Response) => res.json()
         const handleJson = (json:unknown) => {
@@ -107,10 +107,11 @@ class Nsh {
         for (const ix of ixs) ix.sent = true
         return this
     }
-    clientVersion() { return this.pushIx('web3_clientVersion', isString) }
-    sha3(data:string) { return this.pushIx('web3_sha3', isString, [data]) }
-    blockNumber() { return this.pushIx('eth_blockNumber', isBigIntable) }
-    getLogs(filter:Filter) { return this.pushIx('eth_getLogs', isArray, [filter]) }
+    clientVersion() { return this.#unshiftIx('web3_clientVersion', isString) }
+    sha3(data:string) { return this.#unshiftIx('web3_sha3', isString, [data]) }
+    blockNumber() { return this.#unshiftIx('eth_blockNumber', isBigIntable) }
+    getLogs(filter:Filter) { return this.#unshiftIx('eth_getLogs', isArray, [filter]) }
+    getBlockByNumber(tag:Tag, full:boolean) { return this.#unshiftIx('eth_getBlockByNumber', isObject, [tag, full]) }
 }
 
 export default Nsh
