@@ -8,7 +8,7 @@ type SyncData = {
 }
 
 /** @type integer block number, or the string "latest", "earliest" or "pending", see the default block parameter */
-type Tag = string|'latest'|'earliest'|'pending'
+type Tag = string|bigint|'latest'|'earliest'|'pending'
 
 /** @prop removed - true when the log was removed, due to a chain reorganization. false if its a valid log.
   * @prop logIndex -integer of the log index position in the block. null when its pending log.
