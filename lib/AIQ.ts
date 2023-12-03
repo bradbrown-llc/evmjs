@@ -20,9 +20,10 @@ export default class AIQ<T> implements AsyncIterator<T>{
     }
     
     async next():Promise<IteratorResult<T>> {
-        if (!this.#queue.length) { await this.#promise; this.#resetPromise() }
+        if (!this.#queue.length) await this.#promise
+        this.#resetPromise()
         const value = this.#queue.shift() as T|symbol
-        if (value === this.terminator) return { done: true, value: null }
+        if (value === this.terminator) { return { done: true, value: null } }
         if (this.limit === 0) { return { done: true, value: null } }
         if (this.limit) { this.limit--; if (!this.limit) this.push(this.terminator) }
         return { value } as { value:T }
@@ -30,7 +31,7 @@ export default class AIQ<T> implements AsyncIterator<T>{
     
     [Symbol.asyncIterator]() { return this }
     
-    #resetPromise() { this.#promise = new Promise(r => this.push = (x: T|symbol) => { this.#queue.push(x); r(null) }) }
+    #resetPromise() { this.#promise = new Promise(r => this.push = (x: T|symbol) => r(this.#queue.push(x))) }
     
 }
 
