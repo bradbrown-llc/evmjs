@@ -372,29 +372,3 @@ interface Ejra {
     getLogs: (filter:Filter) => ReturnType<Ejra['getFilterChanges']>
     
 }
-
-type EjraParams = Parameters<EjraRpc[keyof EjraRpc]>
-
-type EjraReturns = Awaited<ReturnType<EjraRpc[keyof EjraRpc]>>
-
-type EjraReq = {
-    jsonrpc:'2.0'
-    method:string
-    params:EjraParams
-    id:string|number|null
-}
-
-type EjraRes = {
-    jsonrpc:'2.0',
-    id:string|number|null
-}&({
-    result:EjraReturns
-    error?:never
-}|{
-    error: {
-        code:number
-        message:string
-        data?:unknown
-    }
-    results?:never
-})
