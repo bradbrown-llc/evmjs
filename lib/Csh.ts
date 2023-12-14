@@ -38,6 +38,16 @@ class Csh {
         return [this.ql, () => controller.abort()] as const
     }
     sendfold(fn:(aiq:AIQ<Ix[]>, abort:() => void) => unknown, o?:{ timeout:number }) { return fn(...this.sendql(o)) }
+    first(o?:{ timeout:number }):Promise<unknown> {
+        return this.sendfold(async (aiq, abort) => {
+            const errors:Error[] = []
+            for await (const [{ res, err }] of aiq) {
+                if (err) { errors.push(err); continue }
+                if (res) { abort(); return res }
+            }
+            throw new AggregateError(errors)
+        }, o) as Promise<unknown>
+    }
 }
 
 export default Csh
