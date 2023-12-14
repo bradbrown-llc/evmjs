@@ -1,4 +1,4 @@
-import { isString, isArray, isJsonRpcRes, isBigIntable, isObject } from './guards.ts'
+import { isString, isArray, isJsonRpcRes, isBigintable, isObject } from './guards.ts'
 
 class Nsh {
     url:string
@@ -54,13 +54,14 @@ class Nsh {
         if (!ixs.length) return this
         // map to reqs
         const reqs = ixs.map(({ req }) => req)
-        const body = JSON.stringify(reqs, replacer)
+        const body = JSON.stringify(reqs.length == 1 ? reqs[0] : reqs, replacer)
         const headers = { 'Content-Type': 'application/json' }
         const method = 'POST'
         const signal = o?.signal ?? AbortSignal.timeout(5000)
         const init = { body, headers, method, signal }
         const handleRes = (res:Response) => res.json()
         const handleJson = (json:unknown) => {
+            if (reqs.length == 1) json = [json]
             // verify response is an array
             if (!(isArray(json)))
                 throw new Error('response not array', { cause: JSON.stringify(json) })
@@ -82,7 +83,7 @@ class Nsh {
                     ix.err = new Error('guard failure', { cause: JSON.stringify(x) })
                     continue
                 }
-                // set the result
+                if (ix.guard === isBigintable) x.result = BigInt(x.result as bigintable)
                 ix.res = x.result
             }
             // handle ix's that didn't have a res or an err set
@@ -109,9 +110,10 @@ class Nsh {
     }
     clientVersion() { return this.#unshiftIx('web3_clientVersion', isString) }
     sha3(data:string) { return this.#unshiftIx('web3_sha3', isString, [data]) }
-    blockNumber() { return this.#unshiftIx('eth_blockNumber', isBigIntable) }
+    blockNumber() { return this.#unshiftIx('eth_blockNumber', isBigintable) }
     getLogs(filter:Filter) { return this.#unshiftIx('eth_getLogs', isArray, [filter]) }
     getBlockByNumber(tag:Tag, full:boolean) { return this.#unshiftIx('eth_getBlockByNumber', isObject, [tag, full]) }
+    getTransactionByHash(hash:string) { return this.#unshiftIx('eth_getTransactionByHash', isObject, [hash]) }
 }
 
 export default Nsh
