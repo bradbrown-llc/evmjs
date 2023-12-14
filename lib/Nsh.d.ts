@@ -1,4 +1,4 @@
-type BigIntable = string|number|bigint|boolean
+type bigintable = string|number|bigint|boolean
 type Guard = (x:unknown) => boolean
 /** A JsonRpcReq object. See {@link https://www.jsonrpc.org/specification#request_object |JSON-RPC 2.0 Specification - Request object} */
 type JsonRpcBase = { jsonrpc:'2.0', id:number }
