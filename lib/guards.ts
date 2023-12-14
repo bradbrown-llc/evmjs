@@ -1,5 +1,5 @@
 function isString(x:unknown):x is string { return typeof x == 'string' }
-function isBigIntable(x:unknown):x is BigIntable {
+function isBigintable(x:unknown):x is bigintable {
     if (typeof x == 'string' || typeof x == 'number') try {
         return BigInt(x) !== undefined } catch (_) { return false } else return false }
 function isArray(x:unknown): x is Array<unknown> { return x instanceof Array }
@@ -11,4 +11,4 @@ function isJsonRpcRes(x:unknown): x is JsonRpcRes {
         && 'id' in x && typeof x.id == 'number'
 }
 
-export { isString, isBigIntable, isArray, isObject, isJsonRpcRes }
+export { isString, isBigintable, isArray, isObject, isJsonRpcRes }
