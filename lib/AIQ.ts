@@ -7,6 +7,7 @@
 export default class AIQ<T> implements AsyncIterator<T>{
 
     push!: (x: T|symbol) => void
+    unshift!: (x: T|symbol) => void
     terminator: symbol
     #promise!: Promise<unknown>
     #queue: Array<T|symbol>
@@ -31,7 +32,12 @@ export default class AIQ<T> implements AsyncIterator<T>{
     
     [Symbol.asyncIterator]() { return this }
     
-    #resetPromise() { this.#promise = new Promise(r => this.push = (x: T|symbol) => r(this.#queue.push(x))) }
+    #resetPromise() {
+        this.#promise = new Promise(r => {
+            this.push = (x: T|symbol) => r(this.#queue.push(x))
+            this.unshift = (x: T|symbol) => r(this.#queue.unshift(x))
+        })
+    }
     
 }
 
