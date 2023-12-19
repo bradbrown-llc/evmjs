@@ -1,15 +1,13 @@
 import { isString, isArray, isJsonRpcRes, isBigintable, isObject } from './guards.ts'
 
+type NshOpts = { url:string, bx?:boolean }
+interface Nsh extends NshOpts { ixs:Ix[], fetches:Promise<this>[], lastSent:number|undefined }
 class Nsh {
-    url:string
-    bx:boolean // batching mode
-    ixs:Ixs
-    fetches:Promise<this>[]
-    constructor(url:string, o?:{ bx?:true }) {
-        this.url = url
-        this.bx = o?.bx ?? false
+    constructor(opts:NshOpts) {
+        Object.assign(this, opts)
         this.ixs = []
         this.fetches = []
+        this.lastSent = undefined
     }
     // get results() {
     //     // return a promise that waits for the last fetch to finish
@@ -27,14 +25,14 @@ class Nsh {
     //         })
     //     })
     // }
-    #unshiftIx(method:string, guard:Guard, params?:unknown[]) {
+    #pushIx(method:string, guard:Guard, params?:unknown[]) {
         if (!this.bx) for (const ix of this.ixs) if (!ix.sent) ix.pickled = true
         params = params ?? []
         const jsonrpc = '2.0' as const
         const id = this.ixs.filter(({ sent, pickled }) => !sent && !pickled).length
         const req = { jsonrpc, method, params, id }
         const ix = { req, guard }
-        this.ixs.unshift(ix)
+        this.ixs.push(ix)
         return this
     }
     setBx(flag:boolean) {
@@ -97,23 +95,33 @@ class Nsh {
             for (const ix of ixs) ix.err = err
             return this
         }
-        // # send
-        const f = fetch(this.url, init)
+        // send, with 5s regulator
+        const delay = Math.max((this.lastSent ?? -Infinity) + 5000 - Date.now(), 0)
+        const f = new Promise(r => { setTimeout(r, delay); this.lastSent = Date.now() })
+            .then(() => fetch(this.url, init))
             .then(handleRes)
             .then(handleJson)
-            // if there's an error here, then no ix is getting processed, so set err of all
             .catch(handleErr)
         this.fetches.unshift(f)
-        // # mark ixs that were sent as such
+        // mark ixs that were sent as such
         for (const ix of ixs) ix.sent = true
         return this
     }
-    clientVersion() { return this.#unshiftIx('web3_clientVersion', isString) }
-    sha3(data:string) { return this.#unshiftIx('web3_sha3', isString, [data]) }
-    blockNumber() { return this.#unshiftIx('eth_blockNumber', isBigintable) }
-    getLogs(filter:Filter) { return this.#unshiftIx('eth_getLogs', isArray, [filter]) }
-    getBlockByNumber(tag:Tag, full:boolean) { return this.#unshiftIx('eth_getBlockByNumber', isObject, [tag, full]) }
-    getTransactionByHash(hash:string) { return this.#unshiftIx('eth_getTransactionByHash', isObject, [hash]) }
+    clientVersion() { return this.#pushIx('web3_clientVersion', isString) }
+    sha3(data:string) { return this.#pushIx('web3_sha3', isString, [data]) }
+    blockNumber() { return this.#pushIx('eth_blockNumber', isBigintable) }
+    logs(filter:Filter) { return this.#pushIx('eth_getLogs', isArray, [filter]) }
+    blockByNumber(tag:Tag, full:boolean) { return this.#pushIx('eth_getBlockByNumber', isObject, [tag, full]) }
+    transactionByHash(hash:string) { return this.#pushIx('eth_getTransactionByHash', isObject, [hash]) }
+    storageAt(address:string, slot:bigint, tag:Tag) { return this.#pushIx('eth_getStorageAt', isString, [address, slot, tag]) }
+    estimateGas(tx:TxEstimateGas) { return this.#pushIx('eth_estimateGas', isBigintable, [tx]) }
+    transactionCount(address:string, tag:Tag) { return this.#pushIx('eth_getTransactionCount', isBigintable, [address, tag]) }
+    gasPrice() { return this.#pushIx('eth_gasPrice', isBigintable, []) }
+    chainId() { return this.#pushIx('eth_chainId', isBigintable, []) }
+    sendRawTransaction(encodedTx:string) { return this.#pushIx('eth_sendRawTransaction', isString, [encodedTx]) }
+    transactionReceipt(hash:string) { return this.#pushIx('eth_getTransactionReceipt', isObject, [hash]) }
+    traceTransaction(hash:string, o={ tracer: 'callTracer' }) { return this.#pushIx('debug_traceTransaction', isObject, [hash, o]) }
+    call(tx:TxCall) { return this.#pushIx('eth_call', isObject, [tx]) }
 }
 
 export default Nsh
