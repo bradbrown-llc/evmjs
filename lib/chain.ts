@@ -59,6 +59,7 @@ for await (const dirEntry of await Deno.readDir(`${new URL(import.meta.url).path
     const text = new TextDecoder().decode(uint8Array)
     const chain = JSON.parse(text)
     if (!isChain(chain)) throw new Error(`Invalid Chain`, { cause: `${dirEntry.name} - ${whyNotChain(chain)}: ${JSON.stringify(chain)}` })
+    chain.chainId = BigInt(chain.chainId)
     chains.push(chain)
 }
 
