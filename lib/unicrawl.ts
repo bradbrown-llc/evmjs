@@ -87,12 +87,17 @@ function handleTx(tx:Tx) {
     }
 }
 
+chains_raw.find(chain => chain.name == 'Neon EVM MainNet')
+    ?.rpc?.push(
+        'https://neon-proxy-mainnet.solana.p2p.org',
+        'https://neon-mainnet.everstake.one'
+    )
+
 const chains = chains_raw
     .filter(chain => chain.rpc.filter(url => !url.match(/^ws/)).length >= 1)
-    .sort((c_a, c_b) => c_b.rpc.length - c_a.rpc.length) 
-const chain = chains.filter(chain => chain.name == 'Fantom Testnet').at(0) as Chain
-chain.rpc.push('https://binance.llamarpc.com', 'https://bsc-dataseed4.ninicoin.io')
-console.log(chain.name)
+    .sort((c_a, c_b) => c_b.rpc.length - c_a.rpc.length)
+const chain = chains.filter(chain => chain.name.match('Neon EVM MainNet')).at(0) as Chain
+console.log(chain.name, chain.rpc)
 const csh = new Csh(chain)
 const height = await csh.blockNumber().first({ timeout: 2500 }) as bigint
 push({ fromBlock: 0n, toBlock: height, topics: ['0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1'] })
