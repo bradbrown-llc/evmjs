@@ -1,10 +1,6 @@
 import { exists } from 'https://deno.land/std@0.208.0/fs/mod.ts'
 const { mkdir, watchFs, remove } = Deno
 
-type TrampolineAsync<T> = Promise<T|(() => TrampolineAsync<T>)>
-type Geth = [selector:string, version:string]
-type GethupOpts = { version:string, verbose?:true }
-
 const bin = `${Deno.env.get('HOME')}/.gethup/bin`
 
 async function gethup(opts:GethupOpts) {
