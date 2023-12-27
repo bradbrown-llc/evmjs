@@ -1,1 +1,0 @@
-type Tag = string|bigint|'earliest'|'latest'|'safe'|'finalized'|'pending'
